@@ -1,0 +1,22 @@
+.colorful {
+  color: $clrHilight;
+}
+
+h1, h2, h3 {
+  color: $clrMain;
+}
+
+div.maincontent {
+  color: $clrText;
+  line-height: 130%;
+}
+
+div.buttons {
+  .signin {
+    horiz-align: center;
+  }
+}
+
+table.overview {
+
+}
