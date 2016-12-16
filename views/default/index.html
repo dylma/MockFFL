@@ -1,0 +1,36 @@
+{{left_sidebar_enabled,right_sidebar_enabled=False,('message' in globals())}}
+{{extend 'layout.html'}}
+
+<div id="target"></div>
+
+<div id="buttons">
+    {{if not auth.is_logged_in():}}
+    {{=A('Sign Up',  _class='btn btn-warning', _href=URL('default','user', args=['register']))}}
+    {{=A('Sign In',  _class='btn btn-warning', _href=URL('default','user', args=['login']))}}
+    {{elif not user_has_team:}}
+    {{=A('New team',  _class='btn btn-success', _href=URL('default', 'newteam', user_signature=True))}}
+    {{pass}}
+    {{=A('Players',  _class='btn btn-success', _href=URL('default', 'players'))}}
+    {{if auth.is_logged_in():}}
+    {{=A('Draft',  _class='btn btn-primary', _href=URL('default', 'draft', user_signature=True))}}
+    {{pass}}
+</div>
+
+<hr>
+
+<h1 align="center">League Overview</h1>
+
+<table border="1" width="600px" align="center">
+    <tr>
+        <td align="center"><h4>Team name:</h4></td>
+        <td align="center"><h4>Points this week:</h4></td>
+        <td align="center"><h4>Points this season:</h4></td>
+    </tr>
+    {{for t in team_list:}}
+    <tr>
+        <td align="center">{{=A(t.name, _href=URL('default', 'team', args=[t.id]))}}</td>
+        <td align="center">{{=t.week_points}}</td>
+        <td align="center">{{=t.total_points}}</td>
+    </tr>
+    {{pass}}
+</table>

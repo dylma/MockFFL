@@ -1,0 +1,266 @@
+{{left_sidebar_enabled,right_sidebar_enabled=False,('message' in globals())}}
+{{extend 'layout.html'}}
+
+<div id="target"></div>
+
+<script id="template" type="text/ractive">
+<div id="buttons">
+    {{=A('Overview',  _class='btn btn-warning', _href=URL('default', 'index'))}}
+    {% #if !all_ready %}
+        {% #if user_team.ready == 'False' %}
+        <input class="btn btn-primary" type="button" value="Start drafting" on-click="startdraft">
+        {% else %}
+        <input class="btn btn-primary" type="button" value="Stop drafting" on-click="stopdraft">
+        {% /if %}
+    {% else %}
+    <input class="btn btn-primary" type="button" value="Reset" on-click="resetdraft">
+    {% /if %}
+</div>
+
+<hr>
+    <h1 align="center">Draft</h1>
+    {% #if loading_ %}
+        <div id="load_spinner">
+            <i class="fa fa-spinner fa-pulse fa-4x"></i>
+        </div>
+    {% else %}
+
+<table width="100%">
+<tr>
+    <td align="center">
+    <h2>Teams</h2>
+    <table border="1" width="75%">
+        <tr>
+            <td align="center"><h4>Ready:</h4></td>
+            <td align="center"><h4>Team name:</h4></td>
+        </tr>
+        {% #each team_list %}
+        {% #if all_ready && (turn >= 0) && (id == team_list[turn].id) %}
+        <tr bgcolor="lighblue">
+            <td align="center">
+            {% #if ready == 'True' %}
+                <i class="fa fa-check"></i>
+            {% else %}
+                <i class="fa fa-times"></i>
+            {% /if %}
+            </td>
+            <td align="center">
+                {% name %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td align="center">
+            {% #if ready == 'True' %}
+                <i class="fa fa-check"></i>
+            {% else %}
+                <i class="fa fa-times"></i>
+            {% /if %}
+            </td>
+            <td align="center">
+                {% name %}
+            </td>
+        </tr>
+        {% /if %}
+        {% /each %}
+    </table>
+
+    </td>
+    <td align="center">
+
+    <h2>Players</h2>
+    <table border="1" width="75%">
+        <tr>
+            <td align="center"><h4>Player name:</h4></td>
+            <td align="center"><h4>Pos:</h4></td>
+            <td align="center"><h4>Points:</h4></td>
+        </tr>
+        {% #each player_list %}
+        {% #if team == null %}
+        <tr on-click='pick_player' id='{% id %}' data-id="{% id %}" on-mouseover="hovering" on-mouseout="nothovering">
+            <td align="center">{% name %}{% team %}</td>
+            <td align="center">{% pos %}</td>
+            <td align="center">{% points %}</td>
+        </tr>
+        {% /if %}
+        {% /each %}
+    </table>
+
+    </td>
+    <td align="center">
+
+    <h2>{% user_team.name %}</h2>
+    <table border="1" width="75%">
+        <tr>
+            <td align="center"><h4>Position:</h4></td>
+            <td align="center"><h4>Player name:</h4></td>
+        </tr>
+        {% #each user_players %}
+        <tr>
+            <td align="center">{% pos %}</td>
+            <td align="center">{% name %}</td>
+        </tr>
+        {% /each %}
+    </table>
+
+    </td>
+</tr>
+</table>
+{% /if %}
+
+</script>
+
+<script>
+$(function() {
+    var MAIN = new Ractive({
+        el: '#target',
+        template: '#template',
+        delimiters: ['{%', '%}'],
+        tripleDelimiters: ['{%%', '%%}'],
+        data: {
+            player_list: {},
+            team_list: {},
+            user_team: {},
+            user_players: {},
+            loading: true,
+            all_ready: false,
+            turn: -1
+        }
+    });
+
+    load_teams();
+
+    function load_teams() {
+        $.ajax("{{=URL('default', 'load_teams', args=[team_id], user_signature=True)}}",
+            {
+                method: 'POST',
+                success: function (data) {
+                    var team_list = data['team_list'];
+                    MAIN.set('player_list', data['player_list']);
+                    MAIN.set('loading', false);
+                    MAIN.set('turn', data['turn']);
+                    MAIN.set('team_list', team_list);
+                    MAIN.set('user_team', data['user_team']);
+                    MAIN.set('loading_teams', false);
+                    MAIN.set('user_players', data['user_players']);
+
+                    var all_ready = true;
+                    for (var t in team_list) {
+                        if (team_list[t].ready == 'False')
+                            all_ready = false;
+                    }
+
+                    MAIN.set('all_ready', all_ready);
+                }
+            }
+        );
+    }
+
+    MAIN.on("startdraft", function add_team() {
+        var team = MAIN.get('user_team');
+        $.ajax("{{=URL('default', 'draft_add_team', user_signature=True)}}",
+            {
+                data: {
+                    team_id: team.id
+                },
+                method: 'POST',
+                success: function () {
+                    load_teams();
+                }
+            }
+        );
+    });
+
+    MAIN.on("stopdraft", function remove_team() {
+        var team = MAIN.get('user_team');
+        $.ajax("{{=URL('default', 'draft_remove_team', user_signature=True)}}",
+            {
+                data: {
+                    team_id: team.id
+                },
+                method: 'POST',
+                success: function () {
+                    load_teams();
+                }
+            }
+        );
+    });
+
+    MAIN.on("pick_player", function pick_player(e) {
+        var user_team = MAIN.get('user_team');
+        var team_list = MAIN.get('team_list');
+        var all_ready = MAIN.get('all_ready');
+        var turn = MAIN.get('turn') % team_list.length;
+        if (all_ready) {
+            if (team_list[turn].id == user_team.id) {
+                var user_players = MAIN.get('user_players');
+                var player_list = MAIN.get('player_list');
+                var id = $(e.node).data('id');
+                var player = null;
+
+                for (var p in player_list) {
+                    if (player_list[p].id == id) {
+                        player = player_list[p];
+                    }
+                }
+
+                var have_pos = false;
+                for (var i in user_players) {
+                    if (user_players[i].pos == player.pos) {
+                        have_pos = true;
+                    }
+                }
+
+                if (!have_pos) {
+                    $.ajax("{{=URL('default', 'add_user_player', args=[team_id], user_signature=True)}}",
+                            {
+                                data: {
+                                    player_id: player.id
+                                },
+                                method: 'POST',
+                                success: function () {
+                                    for (var j in player_list) {
+                                        if (player_list[j].id == player.id)
+                                            player_list.splice(j, 1);
+                                    }
+                                    var new_player = {
+                                        name: player.name,
+                                        pos: player.pos
+                                    };
+
+                                    user_players.splice(-1, 0, new_player);
+                                    MAIN.set('player_list', player_list);
+                                    MAIN.set('user_players', user_players);
+                                    MAIN.set('turn', (turn + 1) % team_list.length);
+
+                                    load_teams();
+                                }
+                            }
+                    );
+                } else {
+                    alert("You already have a " + player.pos);
+                }
+            } else {
+                alert("It's not your turn!");
+            }
+        } else {
+            alert("Draft has not started!");
+        }
+    });
+
+    MAIN.on("hovering",    function(e) { e.node.style.backgroundColor = "#9999ff"; });
+    MAIN.on("nothovering", function(e) { e.node.style.backgroundColor = "#ffffff"; });
+
+    MAIN.on("resetdraft", function() {
+        $.ajax("{{=URL('default', 'reset_draft', user_signature=True)}}",
+                {
+                    success: function() {
+                        load_teams();
+                    }
+                });
+
+    });
+
+    setInterval(load_teams, 10000);
+});
+</script>
