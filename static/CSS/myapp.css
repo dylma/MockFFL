@@ -1,0 +1,20 @@
+/* line 1, ../sass/_main.scss */
+.colorful {
+  color: #bb8833;
+}
+
+/* line 5, ../sass/_main.scss */
+h1, h2, h3 {
+  color: #3748bb;
+}
+
+/* line 9, ../sass/_main.scss */
+div.maincontent {
+  color: #666;
+  line-height: 130%;
+}
+
+/* line 15, ../sass/_main.scss */
+div.buttons .signin {
+  horiz-align: center;
+}
